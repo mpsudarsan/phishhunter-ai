@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Blocked - Phishing Guard</title>
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      padding: 40px;
+      background: #1a1a1a;
+      color: white;
+    }
+
+    .box {
+      background: #2b2b2b;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    h1 {
+      color: red;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="box">
+    <h1>⛔ Dangerous Website Blocked</h1>
+
+    <p id="reason"></p>
+
+    <button onclick="goBack()">⬅ Go Back</button>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const reason = params.get("reason");
+
+    document.getElementById("reason").textContent = reason;
+
+    function goBack() {
+      window.history.back();
+    }
+  </script>
+
+</body>
+</html>
