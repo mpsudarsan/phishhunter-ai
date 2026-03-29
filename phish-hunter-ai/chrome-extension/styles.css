@@ -1,0 +1,195 @@
+/* styles.css - Phish Hunter AI Popup */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    width: 380px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    overflow: hidden;
+}
+
+/* Header */
+.header {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    padding: 16px 20px;
+    text-align: center;
+    border-bottom: 1px solid #334155;
+}
+
+.header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.header small {
+    font-size: 11px;
+    opacity: 0.85;
+}
+
+/* Status Bar */
+.status-bar {
+    padding: 14px 16px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 15px;
+    color: white;
+}
+
+.status-safe     { background: #16a34a; }
+.status-danger   { background: #dc2626; }
+.status-warning  { background: #f59e0b; color: #000; }
+.status-loading  { background: #475569; }
+
+/* Score Circle */
+.score-section {
+    padding: 24px 0 20px;
+    display: flex;
+    justify-content: center;
+    background: #1e2937;
+}
+
+.score-circle {
+    width: 118px;
+    height: 118px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 46px;
+    font-weight: 800;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    transition: transform 0.3s ease;
+}
+
+.score-circle:hover {
+    transform: scale(1.08);
+}
+
+.score-safe     { background: linear-gradient(135deg, #16a34a, #4ade80); color: #0f172a; }
+.score-danger   { background: linear-gradient(135deg, #dc2626, #f87171); color: white; }
+.score-warning  { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #0f172a; }
+
+/* Info Section */
+.info-section {
+    padding: 0 18px 10px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 11px 0;
+    border-bottom: 1px solid #334155;
+    font-size: 14px;
+    align-items: center;
+}
+
+.info-label {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.info-value {
+    font-weight: 600;
+    max-width: 210px;
+    text-align: right;
+    word-break: break-all;
+}
+
+/* Explanation Box */
+.explanation {
+    margin: 12px 18px;
+    padding: 14px 16px;
+    background: #1e2937;
+    border-radius: 10px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    border-left: 5px solid #64748b;
+    max-height: 160px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+}
+
+.explanation.safe     { border-left-color: #16a34a; }
+.explanation.danger   { border-left-color: #dc2626; }
+.explanation.warning  { border-left-color: #f59e0b; }
+
+/* Tools Section */
+.tools-section {
+    padding: 10px 18px 18px;
+}
+
+.tools-title {
+    font-size: 12.5px;
+    color: #94a3b8;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.tools-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.tool-tag {
+    background: #334155;
+    color: #cbd5e1;
+    padding: 5px 11px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+
+/* Footer Buttons */
+.footer {
+    display: flex;
+    gap: 12px;
+    padding: 14px 18px;
+    background: #0f172a;
+    border-top: 1px solid #334155;
+}
+
+.btn {
+    flex: 1;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14.5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary {
+    background: #334155;
+    color: #e2e8f0;
+}
+
+.btn-secondary:hover {
+    background: #475569;
+}
+
+.btn-close {
+    background: #1e2937;
+    color: #94a3b8;
+}
+
+.btn-close:hover {
+    background: #334155;
+    color: white;
+}
+
+/* Error Message */
+.error-msg {
+    padding: 30px 20px;
+    text-align: center;
+    color: #fda4af;
+    font-size: 14px;
+    line-height: 1.5;
+}

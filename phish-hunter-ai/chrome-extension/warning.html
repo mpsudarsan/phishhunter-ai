@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Phish Hunter AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: #0d0d1a;
+      color: #e8e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Grid texture — no CSS vars, zero CSP risk */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Glow blob set via JS inline style — avoids pseudo-element CSP crash */
+    #glow-blob {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      background: #13132b;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 20px;
+      padding: 48px 44px 40px;
+      max-width: 520px;
+      width: calc(100% - 40px);
+      animation: cardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(24px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0)    scale(1); }
+    }
+
+    .label-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .label-pill {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      padding: 4px 12px;
+      border-radius: 100px;
+      text-transform: uppercase;
+      animation: blink 2.5s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.55; }
+    }
+
+    .label-line { flex: 1; height: 1px; opacity: 0.3; }
+
+    .icon-wrap {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin-bottom: 24px;
+      animation: iconPop 0.6s 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    @keyframes iconPop {
+      from { transform: scale(0); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+
+    .score-section {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+
+    .score-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .score-lbl {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: #888;
+      letter-spacing: 0.08em;
+    }
+
+    .score-val {
+      font-family: 'Space Mono', monospace;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .score-track {
+      width: 100%;
+      height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+
+    .score-fill {
+      height: 100%;
+      border-radius: 100px;
+      width: 0%;
+      transition: width 0.8s 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .reason-box {
+      font-size: 13.5px;
+      line-height: 1.65;
+      color: #b0b0c8;
+      margin-bottom: 28px;
+      padding: 14px 18px;
+      background: rgba(255,255,255,0.025);
+      border-radius: 0 8px 8px 0;
+      text-align: left;
+    }
+
+    .btn-group { display: flex; gap: 12px; }
+
+    .btn-back {
+      flex: 1;
+      padding: 14px 20px;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: transform 0.15s, filter 0.15s;
+    }
+
+    .btn-back:hover { transform: translateY(-2px); filter: brightness(1.12); }
+
+    .btn-proceed {
+      padding: 14px 20px;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      background: transparent;
+      color: #888;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .btn-proceed:hover { color: #e8e8f0; border-color: rgba(255,255,255,0.28); }
+
+    .footer {
+      margin-top: 24px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: rgba(255,255,255,0.2);
+      letter-spacing: 0.08em;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-dot {
+      width: 6px; height: 6px; border-radius: 50%; opacity: 0.5;
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    /* ════════════════════════════════════════════
+       THEME CLASSES — all hardcoded, no CSS vars
+       in pseudo-elements → no CSP crashes
+       ════════════════════════════════════════════ */
+
+    /* RED */
+    .t-red h1           { color: #ef4444; }
+    .t-red .label-pill  { background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid #ef4444; }
+    .t-red .label-line  { background: linear-gradient(to right, #ef4444, transparent); }
+    .t-red .icon-wrap   { background: rgba(239,68,68,0.1); border: 2px solid #ef4444; box-shadow: 0 0 24px rgba(239,68,68,0.28); }
+    .t-red .score-val   { color: #ef4444; }
+    .t-red .score-fill  { background: linear-gradient(to right, #ff6b6b, #ef4444); }
+    .t-red .reason-box  { border-left: 3px solid #ef4444; }
+    .t-red .btn-back    { background: #ef4444; box-shadow: 0 4px 20px rgba(239,68,68,0.35); }
+    .t-red .footer-dot  { background: #ef4444; }
+    .t-red              { box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 60px rgba(239,68,68,0.1); }
+
+    /* ORANGE */
+    .t-orange h1           { color: #f97316; }
+    .t-orange .label-pill  { background: rgba(249,115,22,0.12); color: #f97316; border: 1px solid #f97316; }
+    .t-orange .label-line  { background: linear-gradient(to right, #f97316, transparent); }
+    .t-orange .icon-wrap   { background: rgba(249,115,22,0.1); border: 2px solid #f97316; box-shadow: 0 0 24px rgba(249,115,22,0.22); }
+    .t-orange .score-val   { color: #f97316; }
+    .t-orange .score-fill  { background: linear-gradient(to right, #fbbf24, #f97316); }
+    .t-orange .reason-box  { border-left: 3px solid #f97316; }
+    .t-orange .btn-back    { background: #f97316; box-shadow: 0 4px 20px rgba(249,115,22,0.3); }
+    .t-orange .footer-dot  { background: #f97316; }
+    .t-orange              { box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 60px rgba(249,115,22,0.08); }
+
+    /* GREEN */
+    .t-green h1           { color: #22c55e; }
+    .t-green .label-pill  { background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid #22c55e; }
+    .t-green .label-line  { background: linear-gradient(to right, #22c55e, transparent); }
+    .t-green .icon-wrap   { background: rgba(34,197,94,0.1); border: 2px solid #22c55e; box-shadow: 0 0 24px rgba(34,197,94,0.2); }
+    .t-green .score-val   { color: #22c55e; }
+    .t-green .score-fill  { background: linear-gradient(to right, #4ade80, #22c55e); }
+    .t-green .reason-box  { border-left: 3px solid #22c55e; }
+    .t-green .btn-back    { background: #22c55e; box-shadow: 0 4px 20px rgba(34,197,94,0.25); }
+    .t-green .footer-dot  { background: #22c55e; }
+    .t-green              { box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 60px rgba(34,197,94,0.06); }
+
+    /* GREY — offline/error */
+    .t-grey h1           { color: #9ca3af; }
+    .t-grey .label-pill  { background: rgba(156,163,175,0.12); color: #9ca3af; border: 1px solid #9ca3af; }
+    .t-grey .label-line  { background: linear-gradient(to right, #9ca3af, transparent); }
+    .t-grey .icon-wrap   { background: rgba(156,163,175,0.1); border: 2px solid #9ca3af; }
+    .t-grey .score-val   { color: #9ca3af; }
+    .t-grey .score-fill  { background: #9ca3af; }
+    .t-grey .reason-box  { border-left: 3px solid #9ca3af; }
+    .t-grey .btn-back    { background: #374151; box-shadow: none; }
+    .t-grey .footer-dot  { background: #9ca3af; }
+    .t-grey              { box-shadow: 0 24px 80px rgba(0,0,0,0.6); }
+  </style>
+</head>
+<body>
+
+  <div id="glow-blob"></div>
+
+  <div class="card t-red" id="card">
+    <div class="label-bar">
+      <span class="label-pill" id="labelPill">DANGEROUS</span>
+      <div class="label-line" id="labelLine"></div>
+      <span style="font-family:'Space Mono',monospace;font-size:10px;color:rgba(255,255,255,0.2);letter-spacing:0.05em;">PHISH HUNTER AI</span>
+    </div>
+
+    <div class="icon-wrap" id="iconWrap">&#9940;</div>
+    <h1 id="headline">Dangerous Website Blocked</h1>
+    <p class="subtitle" id="subtitle">This page was stopped before it could load. Your data is safe.</p>
+
+    <div class="score-section" id="scoreSection" style="display:none;">
+      <div class="score-row">
+        <span class="score-lbl">RISK SCORE</span>
+        <span class="score-val" id="scoreVal">--/100</span>
+      </div>
+      <div class="score-track">
+        <div class="score-fill" id="scoreFill"></div>
+      </div>
+    </div>
+
+    <div class="reason-box" id="reason">
+      This website was flagged as high-risk phishing by Phish Hunter AI.
+    </div>
+
+    <div class="btn-group">
+      <button class="btn-back"    id="btnBack"    onclick="goBack()">&#8592; Go Back to Safety</button>
+      <button class="btn-proceed" id="btnProceed" onclick="proceedAnyway()">IGNORE RISK</button>
+    </div>
+
+    <div class="footer">
+      <span id="footerTime"></span>
+      <div class="footer-dot"></div>
+      <span>PS ID: TUAH4818S</span>
+    </div>
+  </div>
+
+  <script>
+    // Read score and type from URL
+    function loadWarningData() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const score = urlParams.get('score') || '??';
+        const type = urlParams.get('type') || 'page';
+
+        // Update RISK SCORE
+        const scoreElement = document.getElementById('risk-score');
+        if (scoreElement) {
+            scoreElement.textContent = score;
+        }
+
+        // Optional: Change text based on type (email or website)
+        const titleElement = document.getElementById('warning-title');
+        if (titleElement) {
+            titleElement.textContent = type === 'email' 
+                ? 'Dangerous Email Blocked' 
+                : 'Dangerous Website Blocked';
+        }
+
+        // Optional: Change description
+        const descElement = document.getElementById('warning-desc');
+        if (descElement) {
+            descElement.textContent = type === 'email' 
+                ? 'This email was stopped before you could open it. Your data is safe.'
+                : 'This page was stopped before it could load. Your data is safe.';
+        }
+    }
+
+    // Run when page loads
+    document.addEventListener('DOMContentLoaded', loadWarningData);
+    // ── Safe param parsing ───────────────────────────────────────
+    var score = -1, action = "BLOCK", reason = "", blockedUrl = "";
+    try {
+      var p  = new URLSearchParams(window.location.search);
+      score      = parseInt(p.get("score")  || "-1", 10);
+      action     = (p.get("action") || "BLOCK").toUpperCase();
+      reason     = p.get("reason") || "";
+      blockedUrl = p.get("url")    || "";
+    } catch(e) {}
+
+    // ── Footer time ──────────────────────────────────────────────
+    document.getElementById("footerTime").textContent =
+      new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+    // ── Pick theme ───────────────────────────────────────────────
+    var theme = "red";
+    if      (action === "SAFE"    || (score >= 0 && score < 30))  theme = "green";
+    else if (action === "WARN"    || (score >= 30 && score < 60)) theme = "orange";
+    else if (action === "ERROR"   || action === "OFFLINE")        theme = "grey";
+    else                                                           theme = "red";
+
+    // Apply theme
+    document.getElementById("card").className = "card t-" + theme;
+
+    // Glow blob inline style (safe from CSP)
+    var glows = {
+      red:    "radial-gradient(ellipse 60% 50% at 20% 30%, rgba(239,68,68,0.16), transparent), radial-gradient(ellipse 40% 40% at 80% 70%, rgba(100,80,255,0.06), transparent)",
+      orange: "radial-gradient(ellipse 60% 50% at 20% 30%, rgba(249,115,22,0.14), transparent), radial-gradient(ellipse 40% 40% at 80% 70%, rgba(100,80,255,0.06), transparent)",
+      green:  "radial-gradient(ellipse 60% 50% at 20% 30%, rgba(34,197,94,0.12), transparent),  radial-gradient(ellipse 40% 40% at 80% 70%, rgba(100,80,255,0.05), transparent)",
+      grey:   "radial-gradient(ellipse 60% 50% at 20% 30%, rgba(100,100,120,0.1), transparent)"
+    };
+    document.getElementById("glow-blob").style.background = glows[theme];
+
+    // ── Per-theme text ───────────────────────────────────────────
+    var content = {
+      red:    { pill:"DANGEROUS",  icon:"&#9940;",   h1:"Dangerous Website Blocked",    sub:"This page was stopped before it could load. Your data is safe.",        back:"\u2190 Go Back to Safety", proceed:"IGNORE RISK" },
+      orange: { pill:"SUSPICIOUS", icon:"&#9888;",   h1:"Suspicious Page Detected",     sub:"This page shows signs of phishing. We recommend you leave now.",        back:"\u2190 Leave This Page",   proceed:"PROCEED ANYWAY" },
+      green:  { pill:"SAFE",       icon:"&#10003;",  h1:"This Page Looks Safe",         sub:"No threats detected. You can continue browsing.",                       back:"\u2190 Go Back",           proceed:"CONTINUE" },
+      grey:   { pill:"OFFLINE",    icon:"&#63;",     h1:"Scanner Offline",              sub:"Start the backend: python agent/agent_api.py",                          back:"\u2190 Go Back",           proceed:"CONTINUE ANYWAY" }
+    };
+
+    var c = content[theme];
+    document.getElementById("labelPill").innerHTML  = c.pill;
+    document.getElementById("iconWrap").innerHTML   = c.icon;
+    document.getElementById("headline").textContent = c.h1;
+    document.getElementById("subtitle").textContent = c.sub;
+    document.getElementById("btnBack").textContent  = c.back;
+    document.getElementById("btnProceed").textContent = c.proceed;
+
+    // ── Reason — strip Python crash noise ────────────────────────
+    var cleanReason = "";
+    try { cleanReason = decodeURIComponent(reason); } catch(e) { cleanReason = reason; }
+
+    // Remove the Python error message that bleeds into reason param
+    cleanReason = cleanReason
+      .replace(/Agent crashed with error[^.]*\./gi, "")
+      .replace(/['"]type['"] object is not iterable[^.]*/gi, "")
+      .replace(/Using NLP score as fallback\./gi, "")
+      .trim();
+
+    if (!cleanReason || cleanReason.length < 8) {
+      var defaults = {
+        red:    "This website was flagged as high-risk phishing by Phish Hunter AI. It may attempt to steal your credentials or financial details.",
+        orange: "This page shows suspicious characteristics associated with phishing attempts. Proceed only if you trust this source.",
+        green:  "Phish Hunter AI found no phishing signals on this page.",
+        grey:   "The Phish Hunter AI backend could not be reached. Make sure Flask is running on port 5000."
+      };
+      cleanReason = defaults[theme];
+    }
+    document.getElementById("reason").textContent = cleanReason;
+
+    // ── Score bar ─────────────────────────────────────────────────
+    if (score >= 0) {
+      document.getElementById("scoreSection").style.display = "block";
+      document.getElementById("scoreVal").textContent = score + "/100";
+      setTimeout(function() {
+        document.getElementById("scoreFill").style.width = score + "%";
+      }, 150);
+    }
+
+    // ── Button actions ────────────────────────────────────────────
+    function goBack() {
+      if (window.history.length > 1) window.history.back();
+      else window.close();
+    }
+
+    function proceedAnyway() {
+      if (blockedUrl) {
+        try { window.location.href = decodeURIComponent(blockedUrl); }
+        catch(e) { window.location.href = blockedUrl; }
+      } else {
+        goBack();
+      }
+    }
+  </script>
+</body>
+</html>

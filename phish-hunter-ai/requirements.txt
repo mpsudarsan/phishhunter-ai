@@ -1,0 +1,15 @@
+# PhishHunter AI — Python Dependencies
+# Install with: pip install -r requirements.txt
+
+flask==3.0.0
+flask-cors==4.0.0
+python-whois==0.9.4
+
+# Member 2's NLP dependencies (they install these)
+# scikit-learn==1.4.0
+# nltk==3.8.1
+# pandas==2.1.4
+# numpy==1.26.3
+
+# Optional — for testing without API
+requests==2.31.0

@@ -1,0 +1,67 @@
+{
+  "manifest_version": 3,
+  "name": "Phish Hunter AI",
+  "version": "2.0.0",
+  "description": "Real-time phishing detection with NLP + Agentic AI for emails, SMS, and websites (PS ID: TUAH4818S)",
+  "permissions": [
+    "tabs",
+    "scripting",
+    "activeTab",
+    "storage",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "http://localhost:5000/*",
+    "https://mail.google.com/*",
+    "https://outlook.live.com/*",
+    "https://outlook.office.com/*",
+    "https://mail.yahoo.com/*",
+    "https://protonmail.com/*",
+    "https://www.icloud.com/mail/*",
+    "https://web.whatsapp.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Phish Hunter AI",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://web.whatsapp.com/*"],
+      "js": ["whatsapp-selector.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "warning.html",
+        "email-scanner.js",
+        "warning-helper.js",
+        "whatsapp-selector.js",
+        "styles.css"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

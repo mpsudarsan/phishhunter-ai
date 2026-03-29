@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PhishHunter AI – Drishti AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 360px;
+      min-width: 360px;
+      max-width: 360px;
+      background: #0c0c1d;
+      color: #f0eeff;
+      font-family: 'Syne', -apple-system, sans-serif;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ════════════════════════════════════════
+       SCAN BACKGROUND
+       ════════════════════════════════════════ */
+    .scan-bg {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Grid */
+    .scan-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(34,197,94,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34,197,94,0.018) 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+
+    /* Glowing beam */
+    .scan-beam {
+      position: absolute;
+      left: 0; right: 0; top: -2px;
+      height: 2px;
+      background: linear-gradient(90deg,
+        transparent        0%,
+        rgba(34,197,94,0)  8%,
+        rgba(34,197,94,.55) 28%,
+        rgba(74,222,128,1)  50%,
+        rgba(34,197,94,.55) 72%,
+        rgba(34,197,94,0)  92%,
+        transparent        100%
+      );
+      box-shadow: 0 0 7px rgba(34,197,94,.9), 0 0 22px rgba(34,197,94,.32);
+      animation: beamDown 2.8s linear infinite;
+    }
+
+    /* Soft trailing glow below beam */
+    .scan-trail {
+      position: absolute;
+      left: 0; right: 0; top: -92px;
+      height: 90px;
+      background: linear-gradient(to bottom, rgba(34,197,94,.065) 0%, transparent 100%);
+      animation: beamDown 2.8s linear infinite;
+    }
+
+    @keyframes beamDown {
+      from { top: -4px; }
+      to   { top: 100%; }
+    }
+
+    /* Vertical data streams */
+    .vs {
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 1px;
+      background: linear-gradient(to bottom,
+        transparent,
+        rgba(34,197,94,.1) 20%,
+        rgba(34,197,94,.22) 50%,
+        rgba(34,197,94,.1) 80%,
+        transparent
+      );
+      animation: vspulse var(--s,3s) ease-in-out var(--d,0s) infinite;
+    }
+    @keyframes vspulse {
+      0%,100% { opacity:.25; }
+      50%     { opacity:1; }
+    }
+
+    /* Floating particles */
+    .pt {
+      position: absolute;
+      width: 2px; height: 2px;
+      border-radius: 50%;
+      background: rgba(34,197,94,.65);
+      animation: ptrise var(--dur,4s) linear var(--del,0s) infinite;
+    }
+    @keyframes ptrise {
+      0%   { transform:translateY(0); opacity:0; }
+      10%  { opacity:1; }
+      90%  { opacity:.4; }
+      100% { transform:translateY(-500px); opacity:0; }
+    }
+
+    /* Corner brackets */
+    .c { position:absolute; width:14px; height:14px; }
+    .c::before,.c::after { content:''; position:absolute; background:rgba(34,197,94,.42); }
+    .c::before { width:100%; height:1.5px; top:0; left:0; }
+    .c::after  { width:1.5px; height:100%; top:0; left:0; }
+    .tl { top:6px; left:6px; }
+    .tr { top:6px; right:6px; transform:scaleX(-1); }
+    .bl { bottom:6px; left:6px; transform:scaleY(-1); }
+    .br { bottom:6px; right:6px; transform:scale(-1); }
+
+    /* Scanning badge */
+    .scan-badge {
+      position: fixed;
+      top: 9px; right: 11px;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(0,0,0,.55);
+      border: 1px solid rgba(34,197,94,.35);
+      border-radius: 20px;
+      padding: 3px 8px;
+      font-family: 'Space Mono', monospace;
+      font-size: 8px;
+      letter-spacing: .1em;
+      color: rgba(34,197,94,.9);
+      pointer-events: none;
+    }
+    .sb-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: #22c55e;
+      animation: blink 1.4s ease-in-out infinite;
+    }
+    @keyframes blink {
+      0%,100% { opacity:.35; transform:scale(.8); }
+      50%     { opacity:1;   transform:scale(1); }
+    }
+
+    /* ════════════════════════════════════════
+       UI LAYER
+       ════════════════════════════════════════ */
+    .ui { position: relative; z-index: 1; }
+
+    /* HEADER */
+    .header {
+      background: rgba(12,12,29,.9);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(139,92,246,.2);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .hd-product {
+      font-size: 14px; font-weight: 800;
+      color: #f0eeff; letter-spacing: -.01em; line-height: 1.1;
+    }
+    .hd-brand {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px; letter-spacing: .16em;
+      color: #a78bfa; text-transform: uppercase; margin-top: 2px;
+    }
+    .hd-id {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px; color: rgba(255,255,255,.18);
+      letter-spacing: .06em; align-self: flex-start; padding-top: 2px;
+    }
+
+    /* RIBBON */
+    .ribbon {
+      padding: 10px 14px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      backdrop-filter: blur(6px);
+    }
+    .ribbon-icon { font-size: 14px; }
+    .r-safe    { background:rgba(22,163,74,.16);  color:#4ade80; border-bottom:1px solid rgba(22,163,74,.3); }
+    .r-danger  { background:rgba(220,38,38,.16);  color:#f87171; border-bottom:1px solid rgba(220,38,38,.3); }
+    .r-warn    { background:rgba(217,119,6,.16);  color:#fbbf24; border-bottom:1px solid rgba(217,119,6,.3); }
+    .r-loading { background:rgba(139,92,246,.12); color:#a78bfa; border-bottom:1px solid rgba(139,92,246,.2); }
+
+    /* SCORE SECTION */
+    .score-section {
+      display: flex; flex-direction: column;
+      align-items: center;
+      padding: 20px 16px 8px;
+      gap: 12px;
+    }
+
+    .score-circle {
+      position: relative;
+      width: 88px; height: 88px;
+      border-radius: 50%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: #7c3aed;
+      box-shadow: 0 0 0 5px rgba(124,58,237,.14), 0 8px 24px rgba(0,0,0,.45);
+      overflow: hidden;
+      transition: background .4s;
+    }
+    /* outer glow ring */
+    .score-circle::before {
+      content: ''; position: absolute; inset: -4px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(167,139,250,.35);
+    }
+    /* mini scan flash */
+    .score-circle::after {
+      content: ''; position: absolute;
+      left: 0; right: 0; top: -2px; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent);
+      animation: cscan 2.8s linear infinite;
+    }
+    @keyframes cscan { from{top:-2px} to{top:102%} }
+
+    #scoreNum {
+      font-size: 32px; font-weight: 800;
+      font-family: 'Space Mono', monospace;
+      color: #fff; line-height: 1;
+      letter-spacing: -.03em;
+      position: relative; z-index: 1;
+    }
+    #riskPct {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; color: rgba(255,255,255,.5);
+      letter-spacing: .06em; margin-top: 2px;
+      position: relative; z-index: 1;
+    }
+
+    .bar-labels {
+      display: flex; justify-content: space-between; width: 100%;
+      font-family: 'Space Mono', monospace;
+      font-size: 8px; color: rgba(255,255,255,.2);
+      letter-spacing: .04em; margin-bottom: 5px;
+    }
+    .score-track {
+      width: 100%; height: 5px;
+      background: rgba(255,255,255,.07);
+      border-radius: 100px; overflow: hidden;
+    }
+    #scoreRing {
+      width: 0%; height: 100%;
+      background: #7c3aed; border-radius: 100px;
+      transition: width .8s cubic-bezier(.22,1,.36,1), background .4s;
+    }
+
+    /* INFO ROWS */
+    .info-section {
+      margin: 10px 14px 0;
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 11px; overflow: hidden;
+    }
+    .info-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 13px;
+      background: rgba(14,14,34,.82);
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      transition: background .15s;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-row:hover { background: rgba(139,92,246,.07); }
+
+    .info-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; color: rgba(255,255,255,.28);
+      letter-spacing: .1em; text-transform: uppercase;
+    }
+    .info-value {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; font-weight: 700;
+      color: #f0eeff; letter-spacing: .04em;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .live-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%; background: #22c55e; flex-shrink: 0;
+      animation: blink 1.8s ease-in-out infinite;
+    }
+
+    /* EXPLANATION */
+    .explanation {
+      margin: 10px 14px;
+      padding: 11px 13px;
+      background: rgba(14,14,34,.82);
+      backdrop-filter: blur(6px);
+      border-left: 3px solid #7c3aed;
+      border-radius: 0 8px 8px 0;
+      font-size: 11.5px; line-height: 1.65;
+      color: #a09cc0;
+      white-space: pre-wrap; word-break: break-word;
+      transition: border-color .4s;
+    }
+
+    /* TOOLS */
+    .tools-section { margin: 0 14px 12px; }
+    .tools-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px; letter-spacing: .14em;
+      color: rgba(255,255,255,.2); text-transform: uppercase;
+      margin-bottom: 7px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .tools-title::before {
+      content: ''; display: inline-block;
+      width: 3px; height: 3px; border-radius: 50%;
+      background: #a78bfa;
+    }
+    .tools-list { display: flex; flex-wrap: wrap; gap: 5px; }
+    .tool-chip {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px; padding: 4px 10px;
+      background: rgba(139,92,246,.1);
+      border: 1px solid rgba(139,92,246,.24);
+      color: #a78bfa; border-radius: 100px; letter-spacing: .04em;
+    }
+
+    /* ERROR BOX */
+    #errorBox { display: none; margin: 14px; }
+    .error-inner {
+      padding: 12px 14px;
+      background: rgba(220,38,38,.07);
+      border: 1px solid rgba(220,38,38,.22);
+      border-left: 3px solid #dc2626;
+      border-radius: 0 9px 9px 0;
+    }
+    .error-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px; letter-spacing: .12em;
+      color: rgba(220,38,38,.65); text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+    #errorText {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px; line-height: 1.65;
+      color: #fca5a5; white-space: pre-wrap; display: block;
+    }
+
+    /* FOOTER */
+    .footer {
+      display: flex; gap: 9px;
+      padding: 10px 14px 13px;
+      border-top: 1px solid rgba(255,255,255,.06);
+      background: rgba(12,12,29,.9);
+      backdrop-filter: blur(10px);
+    }
+    .btn {
+      flex: 1; padding: 10px 0; border: none;
+      border-radius: 9px;
+      font-family: 'Syne', sans-serif;
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      letter-spacing: .02em;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      transition: transform .15s, filter .15s;
+    }
+    .btn:hover  { transform: translateY(-1px); filter: brightness(1.1); }
+    .btn:active { transform: translateY(0);    filter: brightness(.93); }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #7c3aed, #4c1d95);
+      color: #fff;
+      box-shadow: 0 3px 14px rgba(124,58,237,.35);
+    }
+    .btn-close {
+      background: transparent;
+      color: rgba(255,255,255,.35);
+      border: 1px solid rgba(255,255,255,.09);
+    }
+    .btn-close:hover { color:#f0eeff; border-color:rgba(255,255,255,.22); }
+
+    /* section divider */
+    .divider { height:1px; background:rgba(255,255,255,.05); margin:4px 14px; }
+  </style>
+</head>
+<body>
+
+  <!-- ══ ANIMATED SCAN BACKGROUND ══════════════════════ -->
+  <div class="scan-bg">
+    <div class="scan-grid"></div>
+    <div class="scan-trail"></div>
+    <div class="scan-beam"></div>
+
+    <div class="vs" style="left:14%; --s:2.9s; --d:0.0s;"></div>
+    <div class="vs" style="left:29%; --s:3.7s; --d:0.7s;"></div>
+    <div class="vs" style="left:47%; --s:2.4s; --d:1.3s;"></div>
+    <div class="vs" style="left:63%; --s:4.1s; --d:0.4s;"></div>
+    <div class="vs" style="left:79%; --s:3.2s; --d:1.0s;"></div>
+    <div class="vs" style="left:93%; --s:2.7s; --d:0.2s;"></div>
+
+    <div class="pt" style="left:10%; bottom:5%;  --dur:5.0s; --del:0.0s;"></div>
+    <div class="pt" style="left:24%; bottom:15%; --dur:4.2s; --del:0.8s;"></div>
+    <div class="pt" style="left:43%; bottom:8%;  --dur:6.1s; --del:1.6s;"></div>
+    <div class="pt" style="left:57%; bottom:22%; --dur:4.8s; --del:0.3s;"></div>
+    <div class="pt" style="left:73%; bottom:10%; --dur:5.5s; --del:1.2s;"></div>
+    <div class="pt" style="left:88%; bottom:18%; --dur:3.9s; --del:0.6s;"></div>
+
+    <div class="c tl"></div>
+    <div class="c tr"></div>
+    <div class="c bl"></div>
+    <div class="c br"></div>
+  </div>
+
+  <!-- Scanning badge -->
+  <div class="scan-badge"><div class="sb-dot"></div>SCANNING</div>
+
+  <!-- ══ UI LAYER ═══════════════════════════════════════ -->
+  <div class="ui">
+
+    <!-- HEADER -->
+    <div class="header">
+      <svg width="34" height="34" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+        <defs>
+          <linearGradient id="sg" x1="0" y1="0" x2=".4" y2="1">
+            <stop offset="0%"   stop-color="#9333ea"/>
+            <stop offset="55%"  stop-color="#6d28d9"/>
+            <stop offset="100%" stop-color="#3b0764"/>
+          </linearGradient>
+          <linearGradient id="sh" x1=".5" y1="0" x2=".5" y2="1">
+            <stop offset="0%"   stop-color="#fff" stop-opacity=".18"/>
+            <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+          </linearGradient>
+          <radialGradient id="ig" cx="50%" cy="40%" r="55%">
+            <stop offset="0%"   stop-color="#c4b5fd"/>
+            <stop offset="100%" stop-color="#5b21b6"/>
+          </radialGradient>
+        </defs>
+        <path d="M64 8 L112 26 L112 68 Q112 102 64 120 Q16 102 16 68 L16 26 Z" fill="url(#sg)"/>
+        <path d="M64 8 L112 26 L112 46 Q88 34 64 34 Q40 34 16 46 L16 26 Z" fill="url(#sh)"/>
+        <path d="M64 8 L112 26 L112 68 Q112 102 64 120 Q16 102 16 68 L16 26 Z" fill="none" stroke="rgba(167,139,250,.5)" stroke-width="2"/>
+        <ellipse cx="64" cy="70" rx="28" ry="18" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="2.5"/>
+        <path d="M36 70 Q50 54 64 52 Q78 54 92 70" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M36 70 Q50 82 64 84 Q78 82 92 70" fill="none" stroke="rgba(255,255,255,.6)"  stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="64" cy="70" r="13" fill="url(#ig)"/>
+        <circle cx="64" cy="70" r="6"  fill="#1e0a3c"/>
+        <circle cx="64" cy="70" r="4"  fill="#0c0020"/>
+        <circle cx="64" cy="70" r="2"  fill="rgba(167,139,250,.9)"/>
+        <circle cx="70" cy="64" r="3"  fill="white" opacity=".55"/>
+        <circle cx="73" cy="62" r="1.2" fill="white" opacity=".35"/>
+        <line x1="36" y1="70" x2="92" y2="70" stroke="rgba(196,181,253,.2)" stroke-width="1.2"/>
+        <path d="M24 30 L24 24 L30 24" fill="none" stroke="rgba(196,181,253,.4)" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M98 24 L104 24 L104 30" fill="none" stroke="rgba(196,181,253,.4)" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+
+      <div style="flex:1;">
+        <div class="hd-product">PhishHunter AI</div>
+        <div class="hd-brand">by Drishti AI</div>
+      </div>
+      <div class="hd-id">TUAH4818S</div>
+    </div>
+
+    <!-- RIBBON — driven by popup.js -->
+    <div id="statusBar" class="ribbon r-loading">
+      <span class="ribbon-icon">⏳</span>
+      <span class="ribbon-text">Initialising scanner…</span>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="content">
+
+      <div class="score-section">
+        <div id="scoreCircle" class="score-circle">
+          <span id="scoreNum">0</span>
+          <span id="riskPct">/ 100</span>
+        </div>
+        <div style="width:100%;">
+          <div class="bar-labels">
+            <span>0 — SAFE</span><span>30 — WARN</span><span>60 — BLOCK</span>
+          </div>
+          <div class="score-track">
+            <div id="scoreRing"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-row">
+          <span class="info-label" id="riskLabelText">Risk Level</span>
+          <span id="riskLabel" class="info-value">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label" id="categoryLabel">Category</span>
+          <span id="category" class="info-value">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Action</span>
+          <span id="action" class="info-value">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Live Status</span>
+          <span class="info-value">
+            <span id="liveDot" class="live-dot"></span>
+            <span id="scoreVerdict">Active</span>
+          </span>
+        </div>
+      </div>
+
+      <div id="explanationBox" class="explanation"></div>
+
+      <div class="divider"></div>
+
+      <div class="tools-section">
+        <div class="tools-title">Tools Used</div>
+        <div id="toolsList" class="tools-list"></div>
+      </div>
+
+    </div><!-- /#content -->
+
+    <!-- ERROR BOX -->
+    <div id="errorBox">
+      <div class="error-inner">
+        <div class="error-label">● Scanner Error</div>
+        <span id="errorText"></span>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <button class="btn btn-secondary" id="rescanBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>
+          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>
+        </svg>
+        Rescan
+      </button>
+      <button class="btn btn-close" id="reportBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+        </svg>
+        Report
+      </button>
+    </div>
+
+  </div><!-- /.ui -->
+
+  <script src="popup.js"></script>
+</body>
+</html>
